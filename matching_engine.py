@@ -1,13 +1,13 @@
 class Vertex:
     def __init__(self, node):
         self.id = node
-        self.edges_leaving = []
+        self.edges_leaving = set()
 
     def __str__(self):
         return str(self.id) + ' adjacent: ' + str([x.id for x in self.adjacent])
 
-    def add_edge(self, edge):
-        self.edges_leaving.append(edge)
+    def add_neighbor(self, edge):
+        self.edges_leaving.add(edge)
 
     def get_connections(self):
         return self.edges_leaving
@@ -57,7 +57,7 @@ class Graph:
     def add_vertex(self, node):
         self.num_vertices = self.num_vertices + 1
         new_vertex = Vertex(node)
-        self.graph[node] = []
+        self.graph[node] = set()
 
     def get_vertex(self, n):
         if n in self.graph:
@@ -74,9 +74,9 @@ class Graph:
             self.add_vertex(to)
 
         # Update graph and the actual vertex to keep track of what edges are available
-        self.graph[frm].append(new_edge)
+        self.graph[frm].add(new_edge) # Use a set
         # Below isn't *necessary* but might be helpful for something later
-        self.graph[frm].add_edge(new_edge)
+        self.graph[frm].add_neighbor(new_edge)
 
     def get_vertices(self):
         return self.graph.keys()
@@ -92,11 +92,11 @@ class Graph:
 
 # Start of finding all cycles
 def dfs(graph, start, end):
-    fringe = [(start, [], 1, 1000000)]
+    fringe = [(start, [], [], 1, 1000000)]
     while fringe:
-        node, path, trade_ratio, min_usd = fringe.pop()
+        node, path, edges_used trade_ratio, min_usd = fringe.pop()
         if path and node == end:
-            yield (path, trade_ratio, min_usd)
+            yield (path, edges_used, trade_ratio, min_usd)
             continue
         for edge in graph[node]:
             #getting head and tail vertices  of this edge
@@ -106,12 +106,24 @@ def dfs(graph, start, end):
                 continue
             trade_ratio = trade_ratio * edge.getTradeRatio()
             min_usd = min(min_usd, edge.getUSDValue())
-            fringe.append((to_vertex, path+[to_vertex], trade_ratio, min_usd))
+            fringe.append((to_vertex, path+[to_vertex], edges_used+[edge], trade_ratio, min_usd))
 
 # Returns all cycles with min usd pushed along that cycle (bottle neck flow)
 # Along with the trade ratio
 
-cycles = [ [ [node]+path[0],path[1],path[2]]   for node in graph for path in dfs(graph, node, node)]
+cycles = [ [ [node]+path[0],path[1],path[2], path[3]]   for node in graph for path in dfs(graph, node, node)]
 # End to finding all cycles
+
+
+# Remove edges from a graph that have been used in a cycle trade
+def consume_edges(graph, edges):
+    for e in edges:
+        vertex = e.getFrom
+
+        edge_list = graph[vertex]
+        edge_list.remove(e)
+
+        vertex_edges = vertex.get_connections
+        vertex_edges.remove(e)
 
 if __name__ == '__main__':
